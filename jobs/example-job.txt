@@ -1,0 +1,30 @@
+Senior Software Engineer - Full Stack
+
+Company: Google
+Location: Melbourne, Australia
+
+About the Role:
+Google is looking for an experienced Full Stack Software Engineer. You will work on building scalable, high-performance web applications.
+
+Key Responsibilities:
+- Design and develop full-stack web applications using modern technologies
+- Collaborate with product managers and designers
+- Write clean, maintainable, and well-tested code
+- Participate in code reviews
+- Mentor junior engineers
+- Optimize existing systems
+
+Required Qualifications:
+- 5+ years of professional software development experience
+- Strong proficiency in JavaScript/TypeScript
+- Experience with React or similar modern frontend frameworks
+- Backend development experience (Node.js, Python, Java, or Go)
+- Strong understanding of databases and API design
+- Excellent problem-solving and communication skills
+- Bachelor's degree in Computer Science or related field
+
+Preferred Qualifications:
+- Experience with cloud platforms (AWS, GCP, Azure)
+- Knowledge of Docker and containerization
+- CI/CD pipeline experience
+- Microservices architecture knowledge
