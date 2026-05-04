@@ -120,7 +120,8 @@ async function main() {
   console.log('');
 
   // Skip DOCX creation and MongoDB if suitability score is too low
-  if (score <= 6) {
+  const skipLowScore = (process.env.SKIP_LOW_SCORE ?? 'true') !== 'false';
+  if (skipLowScore && score <= 6) {
     console.log(`⏭️  Resume & Cover Letter skipped (合適程度 ${score}/10 ≤ 6)`);
     console.log(`⏭️  MongoDB skipped (合適程度 ${score}/10 ≤ 6)`);
     return;
