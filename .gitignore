@@ -1,7 +1,16 @@
 node_modules/
 .env
 .env.local
-output/applications/
+output/
 .DS_Store
 *.log
 *.tmp
+
+# Personal data (must be provided by each user)
+data/my-info.json
+data/my-resume.md
+data/my-resume-raw.txt
+applications.md
+jobs/current.txt
+.tmp_prompt.txt
+.onboard-debug.txt

@@ -1,0 +1,207 @@
+const {
+  Document, Packer, Paragraph, TextRun, HeadingLevel,
+  AlignmentType, BorderStyle, Table, TableRow, TableCell,
+  WidthType, ShadingType, UnderlineType
+} = require('docx');
+
+const COLORS = {
+  name: '1a1a2e',
+  accent: '2563eb',
+  text: '374151',
+  light: '6b7280',
+  white: 'ffffff'
+};
+
+function hr() {
+  return new Paragraph({
+    border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: COLORS.accent } },
+    spacing: { before: 40, after: 40 }
+  });
+}
+
+function sectionHeading(text) {
+  return new Paragraph({
+    children: [
+      new TextRun({ text: text.toUpperCase(), bold: true, size: 22, color: COLORS.accent, font: 'Calibri' })
+    ],
+    spacing: { before: 240, after: 60 },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'dbeafe' } }
+  });
+}
+
+function bullet(text) {
+  return new Paragraph({
+    children: [new TextRun({ text, size: 20, color: COLORS.text, font: 'Calibri' })],
+    bullet: { level: 0 },
+    spacing: { before: 20, after: 20 }
+  });
+}
+
+function createResumeDoc(myInfo, data) {
+  const { resume } = data;
+
+  const children = [
+    // Name
+    new Paragraph({
+      children: [
+        new TextRun({ text: myInfo.name, bold: true, size: 48, color: COLORS.name, font: 'Calibri' })
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 60 }
+    }),
+
+    // Contact line
+    new Paragraph({
+      children: [
+        new TextRun({ text: `${myInfo.email}  |  ${myInfo.phone}  |  ${myInfo.location}`, size: 18, color: COLORS.light, font: 'Calibri' })
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 20 }
+    }),
+
+    // Visa / work rights line
+    new Paragraph({
+      children: [
+        new TextRun({ text: myInfo.availability, size: 17, color: COLORS.accent, font: 'Calibri', italics: true })
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 40 }
+    }),
+
+    hr(),
+
+    // Summary
+    sectionHeading('Professional Summary'),
+    new Paragraph({
+      children: [new TextRun({ text: resume.summary, size: 20, color: COLORS.text, font: 'Calibri' })],
+      spacing: { before: 60, after: 60 }
+    }),
+
+    // Skills
+    sectionHeading('Skills & Expertise'),
+    ...Object.entries(resume.skills).map(([category, skills]) =>
+      new Paragraph({
+        children: [
+          new TextRun({ text: `${category}: `, bold: true, size: 20, color: COLORS.text, font: 'Calibri' }),
+          new TextRun({ text: skills.join(', '), size: 20, color: COLORS.text, font: 'Calibri' })
+        ],
+        spacing: { before: 40, after: 40 }
+      })
+    ),
+
+    // Experience
+    sectionHeading('Professional Experience'),
+    ...resume.experience.flatMap(exp => [
+      new Paragraph({
+        children: [
+          new TextRun({ text: exp.title, bold: true, size: 22, color: COLORS.name, font: 'Calibri' }),
+          new TextRun({ text: `  |  ${exp.company}`, size: 20, color: COLORS.accent, font: 'Calibri' }),
+          new TextRun({ text: `  |  ${exp.duration}`, size: 18, color: COLORS.light, font: 'Calibri', italics: true })
+        ],
+        spacing: { before: 140, after: 40 }
+      }),
+      ...exp.bullets.map(b => bullet(b))
+    ]),
+
+    // Education
+    sectionHeading('Education'),
+    ...resume.education.flatMap(edu => [
+      new Paragraph({
+        children: [
+          new TextRun({ text: edu.degree, bold: true, size: 22, color: COLORS.name, font: 'Calibri' }),
+          new TextRun({ text: `  |  ${edu.school}`, size: 20, color: COLORS.accent, font: 'Calibri' }),
+          new TextRun({ text: `  |  ${edu.duration}`, size: 18, color: COLORS.light, font: 'Calibri', italics: true })
+        ],
+        spacing: { before: 140, after: 20 }
+      }),
+      ...(edu.gpa ? [new Paragraph({
+        children: [new TextRun({ text: edu.gpa, bold: true, size: 19, color: COLORS.accent, font: 'Calibri' })],
+        spacing: { before: 0, after: 30 }
+      })] : []),
+      ...(edu.highlights || []).map(h => bullet(h))
+    ])
+  ];
+
+  return new Document({
+    styles: {
+      default: {
+        document: {
+          run: { font: 'Calibri', size: 20, color: COLORS.text }
+        }
+      }
+    },
+    sections: [{
+      properties: {
+        page: {
+          margin: { top: 720, right: 900, bottom: 720, left: 900 }
+        }
+      },
+      children
+    }]
+  });
+}
+
+function createCoverLetterDoc(myInfo, data, companyName) {
+  const today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const children = [
+    // Header
+    new Paragraph({
+      children: [new TextRun({ text: myInfo.name, bold: true, size: 36, color: COLORS.name, font: 'Calibri' })],
+      spacing: { after: 40 }
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: `${myInfo.email}  |  ${myInfo.phone}  |  ${myInfo.location}`, size: 18, color: COLORS.light, font: 'Calibri' })],
+      spacing: { after: 20 }
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: myInfo.availability, size: 17, color: COLORS.accent, font: 'Calibri', italics: true })],
+      spacing: { after: 20 }
+    }),
+
+    hr(),
+
+    // Date
+    new Paragraph({
+      children: [new TextRun({ text: today, size: 20, color: COLORS.light, font: 'Calibri', italics: true })],
+      spacing: { before: 120, after: 120 }
+    }),
+
+    // Salutation
+    new Paragraph({
+      children: [new TextRun({ text: `Dear Hiring Manager at ${companyName},`, size: 22, color: COLORS.text, font: 'Calibri', bold: true })],
+      spacing: { before: 80, after: 160 }
+    }),
+
+    // Body - split paragraphs on double newlines
+    ...data.coverLetter.body.split(/\n\n+/).filter(p => p.trim()).map(para =>
+      new Paragraph({
+        children: [new TextRun({ text: para.trim(), size: 22, color: COLORS.text, font: 'Calibri' })],
+        spacing: { before: 80, after: 160 },
+        alignment: AlignmentType.JUSTIFIED
+      })
+    ),
+
+    // Closing
+    new Paragraph({
+      children: [new TextRun({ text: 'Yours sincerely,', size: 22, color: COLORS.text, font: 'Calibri' })],
+      spacing: { before: 320, after: 200 }
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: myInfo.name, bold: true, size: 22, color: COLORS.name, font: 'Calibri' })],
+    })
+  ];
+
+  return new Document({
+    sections: [{
+      properties: {
+        page: {
+          margin: { top: 900, right: 1080, bottom: 900, left: 1080 }
+        }
+      },
+      children
+    }]
+  });
+}
+
+module.exports = { createResumeDoc, createCoverLetterDoc, Packer };
