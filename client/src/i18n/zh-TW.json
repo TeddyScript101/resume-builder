@@ -1,0 +1,85 @@
+{
+  "nav": {
+    "title": "JobLog",
+    "allApplications": "所有申請",
+    "new": "+ 新增"
+  },
+  "common": {
+    "loading": "載入中...",
+    "back": "返回",
+    "edit": "編輯",
+    "delete": "刪除",
+    "view": "檢視",
+    "cancel": "取消",
+    "saving": "儲存中..."
+  },
+  "status": {
+    "applied": "未有消息",
+    "interview": "面試中",
+    "rejected": "失敗",
+    "offer": "錄取"
+  },
+  "list": {
+    "title": "申請記錄 ({{count}})",
+    "newBtn": "+ 新增申請",
+    "searchPlaceholder": "搜尋公司或職位...",
+    "dateLabel": "申請日期",
+    "clearFilter": "✕ 清除 Filter",
+    "resultsFiltered": "{{filtered}} / {{total}} 筆",
+    "resultsTotal": "共 {{total}} 筆",
+    "noApplications": "尚無申請記錄，點擊「+ 新增申請」來新增。",
+    "noResults": "找不到符合條件的申請。",
+    "deleteConfirm": "確定要刪除 {{company}} 的申請嗎？",
+    "deleteFailed": "刪除失敗：{{error}}",
+    "col": {
+      "date": "日期",
+      "company": "公司",
+      "position": "職位",
+      "status": "狀態",
+      "actions": "操作"
+    },
+    "filter": {
+      "all": "全部"
+    }
+  },
+  "detail": {
+    "applied": "申請日期：",
+    "id": "ID：",
+    "resumeContent": "履歷內容",
+    "coverLetter": "求職信",
+    "notFound": "找不到此申請記錄。",
+    "noContent": "此申請記錄沒有儲存履歷或求職信內容。",
+    "deleteConfirm": "確定要刪除 {{company}} 的申請嗎？",
+    "deleteFailed": "刪除失敗：{{error}}"
+  },
+  "form": {
+    "editTitle": "編輯申請",
+    "newTitle": "新增申請",
+    "companyLabel": "公司名稱",
+    "companyPlaceholder": "例如：Atlassian",
+    "positionLabel": "職位",
+    "positionPlaceholder": "例如：Software Engineer",
+    "statusLabel": "狀態",
+    "resumeLabel": "履歷內容",
+    "optional": "（選填）",
+    "resumePlaceholder": "貼上履歷 JSON 或文字...",
+    "coverLetterLabel": "求職信",
+    "coverLetterPlaceholder": "貼上求職信文字...",
+    "saveChanges": "儲存變更",
+    "createApplication": "建立申請"
+  },
+  "drp": {
+    "allTime": "全部時間",
+    "last7Days": "最近 7 天",
+    "last30Days": "最近 30 天",
+    "last3Months": "最近 3 個月",
+    "custom": "自訂",
+    "selectStart": "請選擇開始日期",
+    "selectEnd": "– 請選擇結束日期",
+    "clear": "清除",
+    "apply": "套用",
+    "calTitle": "{{year}} 年 {{month}}",
+    "months": ["一月","二月","三月","四月","五月","六月","七月","八月","九月","十月","十一月","十二月"],
+    "days": ["一","二","三","四","五","六","日"]
+  }
+}

@@ -15,7 +15,7 @@ function callClaude(prompt) {
     return execSync(`claude --print < "${tmpFile}"`, {
       encoding: 'utf-8',
       maxBuffer: 10 * 1024 * 1024,
-      timeout: 120000
+      timeout: 300000
     }).trim();
   } finally {
     if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);

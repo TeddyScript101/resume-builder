@@ -5,7 +5,8 @@ const path = require('path');
 const http = require('http');
 require('dotenv').config();
 const { buildPrompt, generateContent, parseResponse } = require('./generate-content');
-const { createResumeDoc, createCoverLetterDoc, Packer } = require('./create-docx');
+// const { createResumeDoc, createCoverLetterDoc, Packer } = require('./create-docx');
+const { createResumePDF, createCoverLetterPDF } = require('./create-pdf');
 
 const ROOT = path.join(__dirname, '..');
 const JOB_FILE = path.join(ROOT, 'jobs/current.txt');
@@ -119,7 +120,7 @@ async function main() {
   if (reason) console.log(`  ${reason}`);
   console.log('');
 
-  // Skip DOCX creation and MongoDB if suitability score is too low
+  // Skip PDF creation and MongoDB if suitability score is too low
   const skipLowScore = (process.env.SKIP_LOW_SCORE ?? 'true') !== 'false';
   if (skipLowScore && score <= 6) {
     console.log(`⏭️  Resume & Cover Letter skipped (合適程度 ${score}/10 ≤ 6)`);
@@ -130,22 +131,32 @@ async function main() {
   // Create output directory
   if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-  // Generate Resume DOCX
-  const resumeDoc = createResumeDoc(myInfo, data);
-  const resumePath = path.join(OUTPUT_DIR, `${baseName}_resume.docx`);
-  const resumeBuffer = await Packer.toBuffer(resumeDoc);
+  // // Generate Resume DOCX
+  // const resumeDoc = createResumeDoc(myInfo, data);
+  // const resumePath = path.join(OUTPUT_DIR, `${baseName}_resume.docx`);
+  // const resumeBuffer = await Packer.toBuffer(resumeDoc);
+  // fs.writeFileSync(resumePath, resumeBuffer);
+
+  // // Generate Cover Letter DOCX
+  // const clDoc = createCoverLetterDoc(myInfo, data, companyName);
+  // const clPath = path.join(OUTPUT_DIR, `${baseName}_cover-letter.docx`);
+  // const clBuffer = await Packer.toBuffer(clDoc);
+  // fs.writeFileSync(clPath, clBuffer);
+
+  // Generate Resume PDF
+  const resumePath = path.join(OUTPUT_DIR, `${baseName}_resume.pdf`);
+  const resumeBuffer = await createResumePDF(myInfo, data);
   fs.writeFileSync(resumePath, resumeBuffer);
 
-  // Generate Cover Letter DOCX
-  const clDoc = createCoverLetterDoc(myInfo, data, companyName);
-  const clPath = path.join(OUTPUT_DIR, `${baseName}_cover-letter.docx`);
-  const clBuffer = await Packer.toBuffer(clDoc);
+  // Generate Cover Letter PDF
+  const clPath = path.join(OUTPUT_DIR, `${baseName}_cover-letter.pdf`);
+  const clBuffer = await createCoverLetterPDF(myInfo, data, companyName);
   fs.writeFileSync(clPath, clBuffer);
 
   console.log('✅ Done!\n');
   console.log(`📝 Resume:       ${resumePath}`);
   console.log(`✉️  Cover Letter: ${clPath}`);
-  console.log('\n💡 Tip: Open the .docx files in Word or Google Docs to review before submitting.');
+  console.log('\n💡 Tip: Open the .pdf files in any PDF viewer to review before submitting.');
 
   // Save application to MongoDB via API
   const saved = await postToAPI(

@@ -1,0 +1,85 @@
+{
+  "nav": {
+    "title": "JobLog",
+    "allApplications": "All Applications",
+    "new": "+ New"
+  },
+  "common": {
+    "loading": "Loading...",
+    "back": "Back",
+    "edit": "Edit",
+    "delete": "Delete",
+    "view": "View",
+    "cancel": "Cancel",
+    "saving": "Saving..."
+  },
+  "status": {
+    "applied": "Applied",
+    "interview": "Interview",
+    "rejected": "Rejected",
+    "offer": "Offer"
+  },
+  "list": {
+    "title": "Applications ({{count}})",
+    "newBtn": "+ New Application",
+    "searchPlaceholder": "Search company or position...",
+    "dateLabel": "Applied Date",
+    "clearFilter": "✕ Clear Filter",
+    "resultsFiltered": "{{filtered}} / {{total}}",
+    "resultsTotal": "Total {{total}}",
+    "noApplications": "No applications yet. Click \"+ New Application\" to add one.",
+    "noResults": "No applications match the filters.",
+    "deleteConfirm": "Delete application for {{company}}?",
+    "deleteFailed": "Delete failed: {{error}}",
+    "col": {
+      "date": "Date",
+      "company": "Company",
+      "position": "Position",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "filter": {
+      "all": "All"
+    }
+  },
+  "detail": {
+    "applied": "Applied:",
+    "id": "ID:",
+    "resumeContent": "Resume Content",
+    "coverLetter": "Cover Letter",
+    "notFound": "Application not found.",
+    "noContent": "No resume or cover letter content stored for this application.",
+    "deleteConfirm": "Delete application for {{company}}?",
+    "deleteFailed": "Delete failed: {{error}}"
+  },
+  "form": {
+    "editTitle": "Edit Application",
+    "newTitle": "New Application",
+    "companyLabel": "Company Name",
+    "companyPlaceholder": "e.g. Atlassian",
+    "positionLabel": "Position",
+    "positionPlaceholder": "e.g. Software Engineer",
+    "statusLabel": "Status",
+    "resumeLabel": "Resume Content",
+    "optional": "(optional)",
+    "resumePlaceholder": "Paste resume JSON or text here...",
+    "coverLetterLabel": "Cover Letter",
+    "coverLetterPlaceholder": "Paste cover letter text here...",
+    "saveChanges": "Save Changes",
+    "createApplication": "Create Application"
+  },
+  "drp": {
+    "allTime": "All Time",
+    "last7Days": "Last 7 Days",
+    "last30Days": "Last 30 Days",
+    "last3Months": "Last 3 Months",
+    "custom": "Custom",
+    "selectStart": "Select start date",
+    "selectEnd": "– Select end date",
+    "clear": "Clear",
+    "apply": "Apply",
+    "calTitle": "{{month}} {{year}}",
+    "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    "days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+  }
+}

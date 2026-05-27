@@ -1,20 +1,39 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getApplications, deleteApplication } from '../api/applications';
+import DateRangePicker from './DateRangePicker';
 
-const BADGE = {
-  applied:   { label: '未有消息', cls: 'badge badge-applied' },
-  interview: { label: '面試中',   cls: 'badge badge-interview' },
-  rejected:  { label: '失敗',     cls: 'badge badge-rejected' },
-  offer:     { label: '錄取',     cls: 'badge badge-offer' }
+const BADGE_CLS = {
+  applied:   'badge badge-applied',
+  interview: 'badge badge-interview',
+  rejected:  'badge badge-rejected',
+  offer:     'badge badge-offer'
 };
 
+const SORTERS = {
+  date:     (a, b) => new Date(a.created_at) - new Date(b.created_at),
+  company:  (a, b) => (a.company_name || '').localeCompare(b.company_name || ''),
+  position: (a, b) => (a.position || '').localeCompare(b.position || ''),
+  status:   (a, b) => (a.status || '').localeCompare(b.status || ''),
+};
+
+function SortIcon({ col, sortKey, sortDir }) {
+  if (sortKey !== col) return <span className="sort-icon sort-icon-inactive">↕</span>;
+  return <span className="sort-icon">{sortDir === 'asc' ? '↑' : '↓'}</span>;
+}
+
 export default function ApplicationList() {
+  const { t } = useTranslation();
   const [applications, setApplications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [search, setSearch] = useState('');
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState(null);
+  const [search, setSearch]             = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFrom, setDateFrom]         = useState('');
+  const [dateTo, setDateTo]             = useState('');
+  const [sortKey, setSortKey]           = useState('date');
+  const [sortDir, setSortDir]           = useState('desc');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,17 +44,37 @@ export default function ApplicationList() {
   }, []);
 
   async function handleDelete(id, company) {
-    if (!confirm(`Delete application for ${company}?`)) return;
+    if (!confirm(t('list.deleteConfirm', { company }))) return;
     try {
       await deleteApplication(id);
       setApplications(prev => prev.filter(a => a._id !== id));
     } catch (err) {
-      alert('Delete failed: ' + err.message);
+      alert(t('list.deleteFailed', { error: err.message }));
     }
   }
 
-  if (loading) return <p className="empty">Loading...</p>;
-  if (error) return <p className="empty" style={{ color: '#ef4444' }}>Error: {error}</p>;
+  function handleSort(key) {
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  }
+
+  function clearFilters() {
+    setSearch('');
+    setStatusFilter('all');
+    setDateFrom('');
+    setDateTo('');
+    setSortKey('date');
+    setSortDir('desc');
+  }
+
+  const hasActiveFilters = search || statusFilter !== 'all' || dateFrom || dateTo;
+
+  if (loading) return <p className="empty">{t('common.loading')}</p>;
+  if (error)   return <p className="empty" style={{ color: '#ef4444' }}>Error: {error}</p>;
 
   const counts = applications.reduce((acc, a) => {
     acc[a.status] = (acc[a.status] || 0) + 1;
@@ -48,30 +87,42 @@ export default function ApplicationList() {
       a.company_name?.toLowerCase().includes(q) ||
       a.position?.toLowerCase().includes(q);
     const matchesStatus = statusFilter === 'all' || a.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const appDate = new Date(a.created_at);
+    const matchesFrom = !dateFrom || appDate >= new Date(dateFrom);
+    const matchesTo   = !dateTo   || appDate <= new Date(dateTo + 'T23:59:59');
+    return matchesSearch && matchesStatus && matchesFrom && matchesTo;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    const cmp = SORTERS[sortKey](a, b);
+    return sortDir === 'asc' ? cmp : -cmp;
   });
 
   const FILTER_BTNS = [
-    { key: 'all',       label: '全部',    cls: 'filter-btn filter-btn-all' },
-    { key: 'applied',   label: '未有消息', cls: 'filter-btn badge-applied' },
-    { key: 'interview', label: '面試中',   cls: 'filter-btn filter-btn-interview' },
-    { key: 'rejected',  label: '失敗',     cls: 'filter-btn filter-btn-rejected' },
-    { key: 'offer',     label: '錄取',     cls: 'filter-btn filter-btn-offer' },
+    { key: 'all',      label: t('list.filter.all'),  cls: 'filter-btn filter-btn-all' },
+    { key: 'applied',  label: t('status.applied'),   cls: 'filter-btn badge-applied' },
+    { key: 'rejected', label: t('status.rejected'),  cls: 'filter-btn filter-btn-rejected' },
+    { key: 'offer',    label: t('status.offer'),     cls: 'filter-btn filter-btn-offer' },
   ];
+
+  const BADGE = {
+    applied:   { label: t('status.applied'),   cls: BADGE_CLS.applied },
+    interview: { label: t('status.interview'), cls: BADGE_CLS.interview },
+    rejected:  { label: t('status.rejected'),  cls: BADGE_CLS.rejected },
+    offer:     { label: t('status.offer'),     cls: BADGE_CLS.offer },
+  };
 
   return (
     <div>
       <div className="page-header">
-        <h1>Applications ({applications.length})</h1>
-        <Link to="/new"><button className="btn-primary">+ New Application</button></Link>
+        <h1>{t('list.title', { count: applications.length })}</h1>
+        <Link to="/new"><button className="btn-primary">{t('list.newBtn')}</button></Link>
       </div>
 
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
         {Object.entries(BADGE).map(([key, { label, cls }]) => (
           counts[key] ? (
-            <span key={key} className={cls}>
-              {label}: {counts[key]}
-            </span>
+            <span key={key} className={cls}>{label}: {counts[key]}</span>
           ) : null
         ))}
       </div>
@@ -80,7 +131,7 @@ export default function ApplicationList() {
         <input
           className="search-input"
           type="text"
-          placeholder="搜尋公司或職位..."
+          placeholder={t('list.searchPlaceholder')}
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -95,25 +146,48 @@ export default function ApplicationList() {
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      <div className="date-filter-bar">
+        <span className="date-filter-label">{t('list.dateLabel')}</span>
+        <DateRangePicker
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onChange={(from, to) => { setDateFrom(from); setDateTo(to); }}
+        />
+        {hasActiveFilters && (
+          <button className="btn-clear" onClick={clearFilters}>{t('list.clearFilter')}</button>
+        )}
+        <span className="results-count">
+          {filtered.length < applications.length
+            ? t('list.resultsFiltered', { filtered: filtered.length, total: applications.length })
+            : t('list.resultsTotal', { total: applications.length })}
+        </span>
+      </div>
+
+      {sorted.length === 0 ? (
         <p className="empty">
-          {applications.length === 0
-            ? 'No applications yet. Click "+ New Application" to add one.'
-            : '找不到符合條件的申請。'}
+          {applications.length === 0 ? t('list.noApplications') : t('list.noResults')}
         </p>
       ) : (
         <table>
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Company</th>
-              <th>Position</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th className="sortable-th" onClick={() => handleSort('date')}>
+                {t('list.col.date')} <SortIcon col="date" sortKey={sortKey} sortDir={sortDir} />
+              </th>
+              <th className="sortable-th" onClick={() => handleSort('company')}>
+                {t('list.col.company')} <SortIcon col="company" sortKey={sortKey} sortDir={sortDir} />
+              </th>
+              <th className="sortable-th" onClick={() => handleSort('position')}>
+                {t('list.col.position')} <SortIcon col="position" sortKey={sortKey} sortDir={sortDir} />
+              </th>
+              <th className="sortable-th" onClick={() => handleSort('status')}>
+                {t('list.col.status')} <SortIcon col="status" sortKey={sortKey} sortDir={sortDir} />
+              </th>
+              <th>{t('list.col.actions')}</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map(app => {
+            {sorted.map(app => {
               const badge = BADGE[app.status] || BADGE.applied;
               return (
                 <tr key={app._id}>
@@ -125,9 +199,9 @@ export default function ApplicationList() {
                   <td><span className={badge.cls}>{badge.label}</span></td>
                   <td>
                     <div className="actions">
-                      <button className="btn-secondary" onClick={() => navigate(`/applications/${app._id}`)}>View</button>
-                      <button className="btn-secondary" onClick={() => navigate(`/applications/${app._id}/edit`)}>Edit</button>
-                      <button className="btn-danger" onClick={() => handleDelete(app._id, app.company_name)}>Delete</button>
+                      <button className="btn-secondary" onClick={() => navigate(`/applications/${app._id}`)}>{t('common.view')}</button>
+                      <button className="btn-secondary" onClick={() => navigate(`/applications/${app._id}/edit`)}>{t('common.edit')}</button>
+                      <button className="btn-danger" onClick={() => handleDelete(app._id, app.company_name)}>{t('common.delete')}</button>
                     </div>
                   </td>
                 </tr>

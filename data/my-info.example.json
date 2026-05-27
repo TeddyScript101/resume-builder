@@ -1,0 +1,38 @@
+{
+  "name": "Your Full Name",
+  "email": "your.email@example.com",
+  "phone": "+61 400 000 000",
+  "location": "City, State Postcode, Country",
+  "availability": "immediately available with full working rights",
+  "summary": "A short professional summary about yourself. 2-3 sentences describing your background and strengths.",
+  "skills": {
+    "ai_tooling": ["GitHub Copilot", "ChatGPT"],
+    "frontend": ["React", "TypeScript", "HTML/CSS"],
+    "backend": ["Node.js", "Express", "RESTful API"],
+    "devops": ["Docker", "GitHub Actions"],
+    "tools": ["Git", "Jira"]
+  },
+  "experience": [
+    {
+      "title": "Software Engineer",
+      "company": "Company Name",
+      "duration": "01/01/2023 – 01/01/2024",
+      "achievements": [
+        "Key achievement with measurable impact",
+        "Another achievement highlighting your skills"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "Bachelor of Computer Science",
+      "school": "University Name",
+      "duration": "MM/YYYY – MM/YYYY",
+      "gpa": "GPA: 3.8/4.0",
+      "highlights": [
+        "Dean's List",
+        "Relevant club or activity"
+      ]
+    }
+  ]
+}

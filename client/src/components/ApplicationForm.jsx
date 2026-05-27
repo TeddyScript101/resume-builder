@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getApplication, createApplication, updateApplication } from '../api/applications';
 
 const DEFAULT_FORM = {
@@ -11,6 +12,7 @@ const DEFAULT_FORM = {
 };
 
 export default function ApplicationForm() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
@@ -57,12 +59,12 @@ export default function ApplicationForm() {
     }
   }
 
-  if (loading) return <p className="empty">Loading...</p>;
+  if (loading) return <p className="empty">{t('common.loading')}</p>;
 
   return (
     <div>
-      <button className="back-link" onClick={() => navigate(-1)}>Back</button>
-      <h1>{isEdit ? 'Edit Application' : 'New Application'}</h1>
+      <button className="back-link" onClick={() => navigate(-1)}>{t('common.back')}</button>
+      <h1>{t(isEdit ? 'form.editTitle' : 'form.newTitle')}</h1>
 
       <form onSubmit={handleSubmit}>
         {error && (
@@ -70,65 +72,64 @@ export default function ApplicationForm() {
         )}
 
         <div className="field">
-          <label>Company Name</label>
+          <label>{t('form.companyLabel')}</label>
           <input
             name="company_name"
             value={form.company_name}
             onChange={handleChange}
-            placeholder="e.g. Atlassian"
+            placeholder={t('form.companyPlaceholder')}
             required
           />
         </div>
 
         <div className="field">
-          <label>Position</label>
+          <label>{t('form.positionLabel')}</label>
           <input
             name="position"
             value={form.position}
             onChange={handleChange}
-            placeholder="e.g. Software Engineer"
+            placeholder={t('form.positionPlaceholder')}
             required
           />
         </div>
 
         <div className="field">
-          <label>Status</label>
+          <label>{t('form.statusLabel')}</label>
           <select name="status" value={form.status} onChange={handleChange}>
-            <option value="applied">未有消息 (Applied)</option>
-            <option value="interview">面試中 (Interview)</option>
-            <option value="rejected">失敗 (Rejected)</option>
-            <option value="offer">錄取 (Offer)</option>
+            <option value="applied">{t('status.applied')}</option>
+            <option value="rejected">{t('status.rejected')}</option>
+            <option value="offer">{t('status.offer')}</option>
           </select>
         </div>
 
         <div className="field">
-          <label>Resume Content <span style={{ color: '#94a3b8', fontWeight: 400 }}>(optional)</span></label>
+          <label>{t('form.resumeLabel')} <span style={{ color: '#94a3b8', fontWeight: 400 }}>{t('form.optional')}</span></label>
           <textarea
             name="resume_content"
             value={form.resume_content}
             onChange={handleChange}
             rows={8}
-            placeholder="Paste resume JSON or text here..."
+            placeholder={t('form.resumePlaceholder')}
           />
         </div>
 
         <div className="field">
-          <label>Cover Letter <span style={{ color: '#94a3b8', fontWeight: 400 }}>(optional)</span></label>
+          <label>{t('form.coverLetterLabel')} <span style={{ color: '#94a3b8', fontWeight: 400 }}>{t('form.optional')}</span></label>
           <textarea
             name="cover_letter_content"
             value={form.cover_letter_content}
             onChange={handleChange}
             rows={8}
-            placeholder="Paste cover letter text here..."
+            placeholder={t('form.coverLetterPlaceholder')}
           />
         </div>
 
         <div className="form-actions">
           <button type="submit" className="btn-primary" disabled={saving}>
-            {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Application'}
+            {saving ? t('common.saving') : t(isEdit ? 'form.saveChanges' : 'form.createApplication')}
           </button>
           <button type="button" className="btn-secondary" onClick={() => navigate(-1)}>
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       </form>
