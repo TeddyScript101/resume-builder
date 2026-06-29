@@ -97,6 +97,7 @@ export default function ApplicationForm() {
           <label>{t('form.statusLabel')}</label>
           <select name="status" value={form.status} onChange={handleChange}>
             <option value="applied">{t('status.applied')}</option>
+            <option value="ghosted">{t('status.ghosted')}</option>
             <option value="rejected">{t('status.rejected')}</option>
             <option value="offer">{t('status.offer')}</option>
           </select>

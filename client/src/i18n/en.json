@@ -17,7 +17,9 @@
     "applied": "Applied",
     "interview": "Interview",
     "rejected": "Rejected",
-    "offer": "Offer"
+    "offer": "Offer",
+    "ghosted": "Ghosted",
+    "unsuccessful": "Unsuccessful"
   },
   "list": {
     "title": "Applications ({{count}})",

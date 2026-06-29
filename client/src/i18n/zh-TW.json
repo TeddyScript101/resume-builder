@@ -16,8 +16,10 @@
   "status": {
     "applied": "未有消息",
     "interview": "面試中",
-    "rejected": "失敗",
-    "offer": "錄取"
+    "rejected": "被拒絕",
+    "offer": "錄取",
+    "ghosted": "杳無音訊",
+    "unsuccessful": "未錄取"
   },
   "list": {
     "title": "申請記錄 ({{count}})",

@@ -8,7 +8,8 @@ const BADGE_CLS = {
   applied:   'badge badge-applied',
   interview: 'badge badge-interview',
   rejected:  'badge badge-rejected',
-  offer:     'badge badge-offer'
+  offer:     'badge badge-offer',
+  ghosted:   'badge badge-ghosted',
 };
 
 const SORTERS = {
@@ -101,6 +102,7 @@ export default function ApplicationList() {
   const FILTER_BTNS = [
     { key: 'all',      label: t('list.filter.all'),  cls: 'filter-btn filter-btn-all' },
     { key: 'applied',  label: t('status.applied'),   cls: 'filter-btn badge-applied' },
+    { key: 'ghosted',  label: t('status.ghosted'),   cls: 'filter-btn filter-btn-ghosted' },
     { key: 'rejected', label: t('status.rejected'),  cls: 'filter-btn filter-btn-rejected' },
     { key: 'offer',    label: t('status.offer'),     cls: 'filter-btn filter-btn-offer' },
   ];
@@ -110,6 +112,7 @@ export default function ApplicationList() {
     interview: { label: t('status.interview'), cls: BADGE_CLS.interview },
     rejected:  { label: t('status.rejected'),  cls: BADGE_CLS.rejected },
     offer:     { label: t('status.offer'),     cls: BADGE_CLS.offer },
+    ghosted:   { label: t('status.ghosted'),   cls: BADGE_CLS.ghosted },
   };
 
   return (
@@ -119,12 +122,17 @@ export default function ApplicationList() {
         <Link to="/new"><button className="btn-primary">{t('list.newBtn')}</button></Link>
       </div>
 
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
         {Object.entries(BADGE).map(([key, { label, cls }]) => (
           counts[key] ? (
             <span key={key} className={cls}>{label}: {counts[key]}</span>
           ) : null
         ))}
+        {((counts.rejected || 0) + (counts.ghosted || 0)) > 0 && (
+          <span className="badge badge-rejected" style={{ opacity: 0.7 }}>
+            {t('status.unsuccessful')}: {(counts.rejected || 0) + (counts.ghosted || 0)}
+          </span>
+        )}
       </div>
 
       <div className="search-filter-bar">

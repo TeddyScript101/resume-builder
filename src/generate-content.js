@@ -20,15 +20,19 @@ CONDITIONAL SKILLS RULE: The applicant has the following technologies in their s
 - C#, ASP.NET Core, .NET: include ONLY IF the JD mentions ".NET", "ASP.NET", "C#", or "dotnet"
 - PHP, Laravel: include ONLY IF the JD mentions "PHP" or "Laravel"
 
-PROJECTS RULE: The applicant has personal projects listed under my-info.projects. Do NOT mention any projects in the resume (summary, skills, or experience sections). In the cover letter ONLY, you MAY reference one relevant project (with its demo URL) if the project's tech stack directly matches a key requirement in the JD. If no project is a clear match, omit entirely. Never force a project mention.
+PROJECTS RULE: If the applicant's resume (my-resume.md) contains a Projects section, you MUST preserve ALL entries from it exactly in the JSON output under the "projects" array — do not remove, merge, relocate, or omit any project entries. The applicant also has personal projects listed under my-info.projects; do NOT pull from my-info.projects into the resume. In the cover letter ONLY, you MAY reference one relevant project from my-info.projects (with its demo URL) if the project's tech stack directly matches a key requirement in the JD. If no project is a clear match, omit entirely. Never force a project mention.
 
 BACKEND/FULLSTACK RULE: If the job involves backend or fullstack development, you MUST weave in the applicant's experience with MVC architecture and middleware design. Specifically:
 - In resume experience bullets: mention structuring server-side code using MVC patterns and building/composing middleware (e.g. authentication, logging, error-handling middleware chains in Express or Nest.js interceptors/guards/pipes).
 - In the cover letter body: include one natural sentence about applying MVC structure and middleware to build maintainable, scalable server-side systems.
 
-TITLE CONSISTENCY RULE: Do not use "Senior" in the professional summary unless the applicant has a formal "Senior" job title in their work experience. Use "Full Stack Engineer", "Full Stack Developer", or a title matching the job description instead. Let the experience bullets demonstrate senior-level scope and impact.
+TITLE CONSISTENCY RULE: Do not use "Senior" in the professional summary unless the applicant has a formal "Senior" job title in their work experience. Let the experience bullets demonstrate senior-level scope and impact.
 
-IDENTITY RULE: The applicant is a full stack developer with 3 years of full stack experience. Regardless of whether the JD focuses on frontend, backend, or full stack, the professional summary MUST describe the applicant as a full stack developer (e.g. "Full Stack Engineer", "Full Stack Developer"). Never narrow the summary identity to "Frontend Developer" or "Backend Developer" based on JD wording. You may emphasise relevant skills in the summary, but the core identity stays full stack.
+JOB TITLE PRESERVATION RULE: In the experience section, copy each job title EXACTLY as it appears in "My current resume" (my-resume.md). Ignore the title field in "My personal information" (my-info.json) — it may differ and must not be used. Do NOT add, remove, or change any words in job titles (e.g. do not add "Intern", "Senior", "Junior", or "Lead" unless already present in my-resume.md).
+
+AI TOOLS ACCURACY RULE: In experience bullets, do NOT substitute, add, or remove any specific AI tool names (e.g. ChatGPT, GitHub Copilot, Claude Code, Cursor, Gemini). These are factual records of what was actually used at that job. Copy them exactly as they appear in the resume bullet — even if the job description mentions different AI tools.
+
+IDENTITY RULE: Use the professional identity already established in my resume's Professional Summary as the base. Do not override it to always say "Full Stack". If the summary in my resume says "Front End Engineer", keep that framing. If it says "Full Stack", keep that. You may adjust wording to incorporate JD keywords, but preserve the core identity as written.
 
 
 Please return ONLY a valid JSON object (no markdown fences, no extra text) with this exact structure:
@@ -62,6 +66,13 @@ Please return ONLY a valid JSON object (no markdown fences, no extra text) with 
         "bullets": ["achievement 1", "achievement 2", "achievement 3"]
       }
     ],
+    "projects": [
+      {
+        "name": "Project name exactly as in my-resume.md",
+        "context": "e.g. Academic Project, Deakin University — copy exactly, omit field if not present",
+        "bullets": ["bullet 1", "bullet 2"]
+      }
+    ],
     "education": [
       {
         "degree": "Degree Name",
@@ -85,8 +96,10 @@ async function generateContent(prompt) {
 }
 
 function parseResponse(raw) {
-  // Strip any accidental markdown fences
-  const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+  let cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+  // Strip any leading non-JSON text before the opening brace
+  const jsonStart = cleaned.indexOf('{');
+  if (jsonStart > 0) cleaned = cleaned.slice(jsonStart);
   return JSON.parse(cleaned);
 }
 

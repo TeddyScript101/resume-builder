@@ -5,7 +5,11 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/main.js"
+    "prestart": "node src/prescreen.js",
+    "start": "node src/main.js",
+    "email": "node src/email.js",
+    "audit": "node src/audit.js",
+    "audit:write": "node src/audit.js --write"
   },
   "keywords": [],
   "author": "",

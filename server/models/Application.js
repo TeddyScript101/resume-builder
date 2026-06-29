@@ -7,7 +7,7 @@ const applicationSchema = new mongoose.Schema({
   cover_letter_content: { type: String, default: '' },
   status: {
     type: String,
-    enum: ['applied', 'interview', 'rejected', 'offer'],
+    enum: ['applied', 'interview', 'rejected', 'offer', 'ghosted'],
     default: 'applied'
   },
   created_at: { type: Date, default: Date.now }
