@@ -6,7 +6,7 @@ const http = require('http');
 require('dotenv').config();
 const { buildPrompt, generateContent, parseResponse } = require('./generate-content');
 // const { createResumeDoc, createCoverLetterDoc, Packer } = require('./create-docx');
-const { createResumePDF, createCoverLetterPDF } = require('./create-pdf');
+const { createResumePDF, createCoverLetterPDF, estimateResumePages } = require('./create-pdf');
 
 const ROOT = path.join(__dirname, '..');
 const JOB_FILE = path.join(ROOT, 'jobs/current.txt');
@@ -57,95 +57,118 @@ function detectCompanyName(jobText) {
 }
 
 async function main() {
-  // Check job file has real content
-  if (!fs.existsSync(JOB_FILE)) {
-    console.error('❌ jobs/current.txt not found');
-    process.exit(1);
-  }
+  const args = process.argv.slice(2);
+  const fromJsonIndex = args.indexOf('--from-json');
+  const fromJsonPath = fromJsonIndex !== -1 ? args[fromJsonIndex + 1] : null;
 
-  const jobDescription = fs.readFileSync(JOB_FILE, 'utf-8').trim();
-  if (!jobDescription || jobDescription.startsWith('在這裡貼上')) {
-    console.error('❌ Please paste the job description into jobs/current.txt first');
-    process.exit(1);
-  }
-
-  const myResume = fs.readFileSync(MY_RESUME, 'utf-8');
   const myInfo = JSON.parse(fs.readFileSync(MY_INFO, 'utf-8'));
+  let data, baseName, companyName;
 
-  const backend = (process.env.AI_BACKEND || 'claude').toUpperCase();
-  console.log('📄 Job description loaded');
-  console.log(`🤖 Generating tailored content via ${backend}...\n`);
+  if (fromJsonPath) {
+    if (!fs.existsSync(fromJsonPath)) {
+      console.error(`❌ JSON file not found: ${fromJsonPath}`);
+      process.exit(1);
+    }
+    data = JSON.parse(fs.readFileSync(fromJsonPath, 'utf-8'));
+    baseName = path.basename(fromJsonPath).replace(/_data\.json$/, '');
+    companyName = data.meta?.company || 'Unknown';
+    console.log(`📂 Re-rendering from: ${fromJsonPath}`);
+    console.log(`🏢 ${companyName} — ${data.meta?.jobTitle || 'Role'}`);
+  } else {
+    if (!fs.existsSync(JOB_FILE)) {
+      console.error('❌ jobs/current.txt not found');
+      process.exit(1);
+    }
 
-  const prompt = buildPrompt(jobDescription, myResume, myInfo);
-  const raw = await generateContent(prompt);
+    const jobDescription = fs.readFileSync(JOB_FILE, 'utf-8').trim();
+    if (!jobDescription || jobDescription.startsWith('在這裡貼上')) {
+      console.error('❌ Please paste the job description into jobs/current.txt first');
+      process.exit(1);
+    }
 
-  let data;
-  try {
-    data = parseResponse(raw);
-  } catch (e) {
-    console.error('❌ Failed to parse Claude response. Raw output:');
-    console.error(raw.slice(0, 500));
-    process.exit(1);
-  }
+    const myResume = fs.readFileSync(MY_RESUME, 'utf-8');
 
-  // Hard citizenship/PR requirement → override score to 0
-  if (data.jobAnalysis?.hardCitizenshipRequired) {
-    data.jobAnalysis.suitabilityScore = 0;
-    data.jobAnalysis.suitabilityReason = (data.jobAnalysis.suitabilityReason || '') +
-      ' 【此職位有硬性 PR/公民要求，自動評分為 0】';
-  }
+    const fillInMatches = [...myResume.matchAll(/\[FILL IN\]/gi)];
+    if (fillInMatches.length > 0) {
+      console.error(`❌ my-resume.md contains ${fillInMatches.length} unfilled [FILL IN] placeholder(s). Fix before generating.`);
+      process.exit(1);
+    }
 
-  // Build filename: YYYY-MM-DD_Company_Job-Title
-  const date = new Date().toISOString().split('T')[0];
-  const company = (data.meta?.company || detectCompanyName(jobDescription))
-    .replace(/[^a-zA-Z0-9\s]/g, '').trim()
-    .replace(/\s+/g, '-');
-  const jobTitle = (data.meta?.jobTitle || 'Application')
-    .replace(/[^a-zA-Z0-9\s]/g, '').trim()
-    .replace(/\s+/g, '-');
-  const baseName = `${date}_${company}_${jobTitle}`;
-  const companyName = data.meta?.company || detectCompanyName(jobDescription);
+    console.log('📄 Job description loaded');
+    console.log('🤖 Generating tailored content via Claude...\n');
 
-  console.log(`🏢 ${companyName} — ${data.meta?.jobTitle || 'Role'}`);
+    const prompt = buildPrompt(jobDescription, myResume, myInfo);
+    const raw = await generateContent(prompt);
 
-  // Print job analysis to terminal
-  const score = data.jobAnalysis.suitabilityScore;
-  const reason = data.jobAnalysis.suitabilityReason;
-  console.log('\n📊 Job Analysis:');
-  console.log('  核心要求：');
-  data.jobAnalysis.coreRequirements.forEach(r => console.log(`    • ${r}`));
-  console.log('  軟技能：');
-  data.jobAnalysis.softSkills.forEach(s => console.log(`    • ${s}`));
-  console.log(`\n  合適程度：${score}/10`);
-  if (reason) console.log(`  ${reason}`);
-  console.log('');
+    try {
+      data = parseResponse(raw);
+    } catch (e) {
+      console.error('❌ Failed to parse Claude response. Raw output:');
+      console.error(raw.slice(0, 500));
+      process.exit(1);
+    }
 
-  // Skip PDF creation and MongoDB if suitability score is too low
-  const skipLowScore = (process.env.SKIP_LOW_SCORE ?? 'true') !== 'false';
-  if (skipLowScore && score <= 6) {
-    console.log(`⏭️  Resume & Cover Letter skipped (合適程度 ${score}/10 ≤ 6)`);
-    console.log(`⏭️  MongoDB skipped (合適程度 ${score}/10 ≤ 6)`);
-    return;
+    // Custom cover letter override — if jobs/cover-letter-body.txt exists, use it instead of Claude's version
+    const clBodyFile = path.join(ROOT, 'jobs/cover-letter-body.txt');
+    if (fs.existsSync(clBodyFile)) {
+      data.coverLetter.body = fs.readFileSync(clBodyFile, 'utf-8').trim();
+      fs.unlinkSync(clBodyFile);
+      console.log('✍️  Custom cover letter injected from jobs/cover-letter-body.txt');
+    }
+
+    // Hard citizenship/PR requirement → override score to 0
+    if (data.jobAnalysis?.hardCitizenshipRequired) {
+      data.jobAnalysis.suitabilityScore = 0;
+      data.jobAnalysis.suitabilityReason = (data.jobAnalysis.suitabilityReason || '') +
+        ' 【此職位有硬性 PR/公民要求，自動評分為 0】';
+    }
+
+    // Build filename: YYYY-MM-DD_Company_Job-Title
+    const date = new Date().toISOString().split('T')[0];
+    const company = (data.meta?.company || detectCompanyName(jobDescription))
+      .replace(/[^a-zA-Z0-9\s]/g, '').trim()
+      .replace(/\s+/g, '-');
+    const jobTitle = (data.meta?.jobTitle || 'Application')
+      .replace(/[^a-zA-Z0-9\s]/g, '').trim()
+      .replace(/\s+/g, '-');
+    baseName = `${date}_${company}_${jobTitle}`;
+    companyName = data.meta?.company || detectCompanyName(jobDescription);
+
+    console.log(`🏢 ${companyName} — ${data.meta?.jobTitle || 'Role'}`);
+
+    // Print job analysis to terminal
+    const score = data.jobAnalysis.suitabilityScore;
+    const reason = data.jobAnalysis.suitabilityReason;
+    console.log('\n📊 Job Analysis:');
+    console.log('  核心要求：');
+    data.jobAnalysis.coreRequirements.forEach(r => console.log(`    • ${r}`));
+    console.log('  軟技能：');
+    data.jobAnalysis.softSkills.forEach(s => console.log(`    • ${s}`));
+    console.log(`\n  合適程度：${score}/10`);
+    if (reason) console.log(`  ${reason}`);
+    console.log('');
+
+    // Skip PDF creation and MongoDB if suitability score is too low
+    const skipLowScore = (process.env.SKIP_LOW_SCORE ?? 'true') !== 'false';
+    if (skipLowScore && score <= 6) {
+      console.log(`⏭️  Resume & Cover Letter skipped (合適程度 ${score}/10 ≤ 6)`);
+      console.log(`⏭️  MongoDB skipped (合適程度 ${score}/10 ≤ 6)`);
+      return;
+    }
+
+    // Save JSON for future re-render
+    if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+    const jsonPath = path.join(OUTPUT_DIR, `${baseName}_data.json`);
+    fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2));
+    console.log(`💾 Data saved: ${jsonPath}`);
   }
 
   // Create output directory
   if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-  // // Generate Resume DOCX
-  // const resumeDoc = createResumeDoc(myInfo, data);
-  // const resumePath = path.join(OUTPUT_DIR, `${baseName}_resume.docx`);
-  // const resumeBuffer = await Packer.toBuffer(resumeDoc);
-  // fs.writeFileSync(resumePath, resumeBuffer);
-
-  // // Generate Cover Letter DOCX
-  // const clDoc = createCoverLetterDoc(myInfo, data, companyName);
-  // const clPath = path.join(OUTPUT_DIR, `${baseName}_cover-letter.docx`);
-  // const clBuffer = await Packer.toBuffer(clDoc);
-  // fs.writeFileSync(clPath, clBuffer);
-
   // Generate Resume PDF
   const resumePath = path.join(OUTPUT_DIR, `${baseName}_resume.pdf`);
-  const resumeBuffer = await createResumePDF(myInfo, data);
+  const { buffer: resumeBuffer } = await createResumePDF(myInfo, data);
   fs.writeFileSync(resumePath, resumeBuffer);
 
   // Generate Cover Letter PDF
@@ -158,17 +181,18 @@ async function main() {
   console.log(`✉️  Cover Letter: ${clPath}`);
   console.log('\n💡 Tip: Open the .pdf files in any PDF viewer to review before submitting.');
 
-  // Save application to MongoDB via API
-  const saved = await postToAPI(
-    companyName,
-    data.meta?.jobTitle || 'Unknown Role',
-    JSON.stringify(data.resume, null, 2),
-    data.coverLetter.body
-  );
-  if (saved) {
-    console.log('📋 Application saved → MongoDB (http://localhost:5000/api/applications)');
-  } else {
-    console.log('⚠️  Could not reach API server. Start with: cd server && npm start');
+  if (!fromJsonPath) {
+    const saved = await postToAPI(
+      companyName,
+      data.meta?.jobTitle || 'Unknown Role',
+      JSON.stringify(data.resume, null, 2),
+      data.coverLetter.body
+    );
+    if (saved) {
+      console.log('📋 Application saved → MongoDB (http://localhost:5000/api/applications)');
+    } else {
+      console.log('⚠️  Could not reach API server. Start with: cd server && npm start');
+    }
   }
 }
 

@@ -1,4 +1,5 @@
 **/node_modules/
+client/dist/
 .env
 .env.local
 output/
@@ -9,6 +10,7 @@ output/
 # Personal data (must be provided by each user)
 data/my-info.json
 data/my-resume.md
+data/my-resume-base.md
 data/my-resume-raw.txt
 applications.md
 jobs/current.txt
