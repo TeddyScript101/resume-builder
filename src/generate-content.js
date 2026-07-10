@@ -84,7 +84,7 @@ Please return ONLY a valid JSON object (no markdown fences, no extra text) with 
     ]
   },
   "coverLetter": {
-    "body": "Full cover letter text (250-350 words). Professional, enthusiastic but not over the top. Include: opening expressing interest, 2-3 paragraphs on relevant experience, strong call to action closing. IMPORTANT: You MUST naturally mention the applicant's availability: ${myInfo.availability}. This lets the employer know the availability and work rights situation upfront. Weave it in naturally (e.g. in the opening or closing paragraph). PORTFOLIO: Naturally reference the applicant's portfolio site (${myInfo.portfolio}) in one sentence, mentioning that it includes live project demos and technical blog posts documenting their engineering decisions. Place this in the closing paragraph as an invitation to explore further. Do NOT include any header/address/date lines - just the body paragraphs."
+    "body": "Full cover letter text (250-350 words). Professional, enthusiastic but not over the top. Include: opening expressing interest, 2-3 paragraphs on relevant experience, strong call to action closing. REQUIREMENT COVERAGE: Before writing, review every item in jobAnalysis.coreRequirements (including 加分/nice-to-have items). For each item the applicant genuinely has matching experience for (per my-resume.md or my-info.json), weave in at least a short phrase of real evidence, even if it only fits as a brief clause, so the letter reads as a direct argument for why the applicant meets the JD, not just a highlight reel of the most impressive achievements. Do NOT fabricate experience for requirements the applicant does not have; simply omit those. Do NOT add a labeled section header (e.g. 'Why This Role Fits') - this must stay natural prose. IMPORTANT: You MUST naturally mention the applicant's availability: ${myInfo.availability}. This lets the employer know the availability and work rights situation upfront. Weave it in naturally (e.g. in the opening or closing paragraph). PORTFOLIO: Naturally reference the applicant's portfolio site (${myInfo.portfolio}) in one sentence, mentioning that it includes live project demos and technical blog posts documenting their engineering decisions. Vary the wording each time rather than reusing the same phrasing. Place this in the closing paragraph as an invitation to explore further. FORMATTING: Separate paragraphs with a double newline (\\n\\n) - this is required, not optional, since the output is rendered by splitting on double newlines. Do NOT include any header/address/date lines - just the body paragraphs."
   }
 }
 
@@ -100,6 +100,9 @@ function parseResponse(raw) {
   // Strip any leading non-JSON text before the opening brace
   const jsonStart = cleaned.indexOf('{');
   if (jsonStart > 0) cleaned = cleaned.slice(jsonStart);
+  // Strip any trailing non-JSON text (e.g. chat commentary) after the closing brace
+  const jsonEnd = cleaned.lastIndexOf('}');
+  if (jsonEnd !== -1 && jsonEnd < cleaned.length - 1) cleaned = cleaned.slice(0, jsonEnd + 1);
   return JSON.parse(cleaned);
 }
 

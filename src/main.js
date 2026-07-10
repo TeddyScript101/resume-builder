@@ -98,23 +98,52 @@ async function main() {
     console.log('🤖 Generating tailored content via Claude...\n');
 
     const prompt = buildPrompt(jobDescription, myResume, myInfo);
-    const raw = await generateContent(prompt);
 
-    try {
-      data = parseResponse(raw);
-    } catch (e) {
-      console.error('❌ Failed to parse Claude response. Raw output:');
-      console.error(raw.slice(0, 500));
+    const MAX_ATTEMPTS = 3;
+    let lastRaw, lastError;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const raw = await generateContent(prompt);
+      try {
+        data = parseResponse(raw);
+        break;
+      } catch (e) {
+        lastRaw = raw;
+        lastError = e;
+        data = null;
+        if (attempt < MAX_ATTEMPTS) {
+          console.warn(`⚠️  Claude response was truncated/invalid (attempt ${attempt}/${MAX_ATTEMPTS}). Retrying...`);
+        }
+      }
+    }
+
+    if (!data) {
+      console.error(`❌ Failed to parse Claude response after ${MAX_ATTEMPTS} attempts. Raw output:`);
+      console.error(lastRaw.slice(0, 500));
       process.exit(1);
     }
 
-    // Custom cover letter override — if jobs/cover-letter-body.txt exists, use it instead of Claude's version
-    const clBodyFile = path.join(ROOT, 'jobs/cover-letter-body.txt');
-    if (fs.existsSync(clBodyFile)) {
+    // Custom cover letter override — if any cover-letter-*.txt exists in output/, use it
+    const clFiles = fs.existsSync(OUTPUT_DIR)
+      ? fs.readdirSync(OUTPUT_DIR).filter(f => f.startsWith('cover-letter-') && f.endsWith('.txt'))
+      : [];
+    if (clFiles.length > 1) {
+      console.error(`❌ Multiple cover-letter-*.txt files found in output/: ${clFiles.join(', ')}`);
+      console.error('   Delete all but the correct one before running.');
+      process.exit(1);
+    }
+    if (clFiles.length === 1) {
+      const clBodyFile = path.join(OUTPUT_DIR, clFiles[0]);
       data.coverLetter.body = fs.readFileSync(clBodyFile, 'utf-8').trim();
       fs.unlinkSync(clBodyFile);
-      console.log('✍️  Custom cover letter injected from jobs/cover-letter-body.txt');
+      console.log(`✍️  Custom cover letter injected from output/${clFiles[0]}`);
     }
+
+    // Sanity-check cover letter body against prompt rules (word count, em dash, paragraph breaks)
+    const clBody = data.coverLetter.body;
+    const wc = clBody.trim().split(/\s+/).length;
+    if (wc < 200 || wc > 400) console.warn(`⚠️  Cover letter word count: ${wc} (target 250-350)`);
+    if (/—/.test(clBody)) console.warn('⚠️  Cover letter contains em dash');
+    if (!clBody.includes('\n\n')) console.warn('⚠️  Cover letter has no paragraph breaks');
 
     // Hard citizenship/PR requirement → override score to 0
     if (data.jobAnalysis?.hardCitizenshipRequired) {
