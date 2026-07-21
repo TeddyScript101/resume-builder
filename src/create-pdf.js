@@ -157,7 +157,16 @@ async function createResumePDF(myInfo, data) {
       doc.addPage();
       y = 36;
     }
-    y = sectionHead(doc, 'PROJECTS', y, W, L, R, CW);
+    doc.font('Helvetica-Bold').fontSize(9.5).fillColor(C.accent)
+       .text('PROJECTS', L, y, { continued: true });
+    if (myInfo.portfolio) {
+      const portfolioDisplay = myInfo.portfolio.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      doc.font('Helvetica').fontSize(8.5).fillColor(C.light)
+         .text(`   |   Visit my portfolio site: ${portfolioDisplay}`);
+    } else {
+      doc.text('');
+    }
+    { const lineY = doc.y + 2; rule(doc, lineY, W, L, R, C.ruleLight, 0.5); y = lineY + 7; }
     (resume.projects || []).forEach((proj, i) => {
       if (i > 0) y += 10;
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor(C.name)

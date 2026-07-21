@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getApplications, deleteApplication } from '../api/applications';
-import DateRangePicker from './DateRangePicker';
+import DateRangePicker, { POST_485_DATE } from './DateRangePicker';
 
 const BADGE_CLS = {
   applied:   'badge badge-applied',
@@ -77,21 +77,25 @@ export default function ApplicationList() {
   if (loading) return <p className="empty">{t('common.loading')}</p>;
   if (error)   return <p className="empty" style={{ color: '#ef4444' }}>Error: {error}</p>;
 
-  const counts = applications.reduce((acc, a) => {
+  const dateFiltered = applications.filter(a => {
+    const appDate = new Date(a.created_at);
+    const matchesFrom = !dateFrom || appDate >= new Date(dateFrom);
+    const matchesTo   = !dateTo   || appDate <= new Date(dateTo + 'T23:59:59');
+    return matchesFrom && matchesTo;
+  });
+
+  const counts = dateFiltered.reduce((acc, a) => {
     acc[a.status] = (acc[a.status] || 0) + 1;
     return acc;
   }, {});
 
   const q = search.trim().toLowerCase();
-  const filtered = applications.filter(a => {
+  const filtered = dateFiltered.filter(a => {
     const matchesSearch = !q ||
       a.company_name?.toLowerCase().includes(q) ||
       a.position?.toLowerCase().includes(q);
     const matchesStatus = statusFilter === 'all' || a.status === statusFilter;
-    const appDate = new Date(a.created_at);
-    const matchesFrom = !dateFrom || appDate >= new Date(dateFrom);
-    const matchesTo   = !dateTo   || appDate <= new Date(dateTo + 'T23:59:59');
-    return matchesSearch && matchesStatus && matchesFrom && matchesTo;
+    return matchesSearch && matchesStatus;
   });
 
   const sorted = [...filtered].sort((a, b) => {
@@ -118,7 +122,7 @@ export default function ApplicationList() {
   return (
     <div>
       <div className="page-header">
-        <h1>{t('list.title', { count: applications.length })}</h1>
+        <h1>{t('list.title', { count: filtered.length })}</h1>
         <Link to="/new"><button className="btn-primary">{t('list.newBtn')}</button></Link>
       </div>
 
@@ -161,6 +165,15 @@ export default function ApplicationList() {
           dateTo={dateTo}
           onChange={(from, to) => { setDateFrom(from); setDateTo(to); }}
         />
+        <button
+          className={`filter-btn${dateFrom === POST_485_DATE && !dateTo ? ' active' : ''}`}
+          onClick={() => {
+            if (dateFrom === POST_485_DATE && !dateTo) { setDateFrom(''); setDateTo(''); }
+            else { setDateFrom(POST_485_DATE); setDateTo(''); }
+          }}
+        >
+          {t('drp.post485')}
+        </button>
         {hasActiveFilters && (
           <button className="btn-clear" onClick={clearFilters}>{t('list.clearFilter')}</button>
         )}

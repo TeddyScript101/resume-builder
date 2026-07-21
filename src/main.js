@@ -5,6 +5,7 @@ const path = require('path');
 const http = require('http');
 require('dotenv').config();
 const { buildPrompt, generateContent, parseResponse } = require('./generate-content');
+const { parseResume } = require('./parse-resume');
 // const { createResumeDoc, createCoverLetterDoc, Packer } = require('./create-docx');
 const { createResumePDF, createCoverLetterPDF, estimateResumePages } = require('./create-pdf');
 
@@ -122,6 +123,10 @@ async function main() {
       process.exit(1);
     }
 
+    // Resume content comes verbatim from my-resume.md — Claude never rewrites it,
+    // it only scores fit (jobAnalysis) and writes the cover letter.
+    data.resume = parseResume(myResume, myInfo);
+
     // Custom cover letter override — if any cover-letter-*.txt exists in output/, use it
     const clFiles = fs.existsSync(OUTPUT_DIR)
       ? fs.readdirSync(OUTPUT_DIR).filter(f => f.startsWith('cover-letter-') && f.endsWith('.txt'))
@@ -145,13 +150,6 @@ async function main() {
     if (/—/.test(clBody)) console.warn('⚠️  Cover letter contains em dash');
     if (!clBody.includes('\n\n')) console.warn('⚠️  Cover letter has no paragraph breaks');
 
-    // Hard citizenship/PR requirement → override score to 0
-    if (data.jobAnalysis?.hardCitizenshipRequired) {
-      data.jobAnalysis.suitabilityScore = 0;
-      data.jobAnalysis.suitabilityReason = (data.jobAnalysis.suitabilityReason || '') +
-        ' 【此職位有硬性 PR/公民要求，自動評分為 0】';
-    }
-
     // Build filename: YYYY-MM-DD_Company_Job-Title
     const date = new Date().toISOString().split('T')[0];
     const company = (data.meta?.company || detectCompanyName(jobDescription))
@@ -166,22 +164,17 @@ async function main() {
     console.log(`🏢 ${companyName} — ${data.meta?.jobTitle || 'Role'}`);
 
     // Print job analysis to terminal
-    const score = data.jobAnalysis.suitabilityScore;
-    const reason = data.jobAnalysis.suitabilityReason;
     console.log('\n📊 Job Analysis:');
     console.log('  核心要求：');
     data.jobAnalysis.coreRequirements.forEach(r => console.log(`    • ${r}`));
     console.log('  軟技能：');
     data.jobAnalysis.softSkills.forEach(s => console.log(`    • ${s}`));
-    console.log(`\n  合適程度：${score}/10`);
-    if (reason) console.log(`  ${reason}`);
     console.log('');
 
-    // Skip PDF creation and MongoDB if suitability score is too low
-    const skipLowScore = (process.env.SKIP_LOW_SCORE ?? 'true') !== 'false';
-    if (skipLowScore && score <= 6) {
-      console.log(`⏭️  Resume & Cover Letter skipped (合適程度 ${score}/10 ≤ 6)`);
-      console.log(`⏭️  MongoDB skipped (合適程度 ${score}/10 ≤ 6)`);
+    // Hard citizenship/PR requirement → block PDF/MongoDB outright
+    if (data.jobAnalysis?.hardCitizenshipRequired) {
+      console.log('⏭️  Resume & Cover Letter skipped (硬性 PR/公民權要求)');
+      console.log('⏭️  MongoDB skipped (硬性 PR/公民權要求)');
       return;
     }
 

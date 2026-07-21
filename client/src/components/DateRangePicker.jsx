@@ -14,6 +14,8 @@ function fmtDisplay(str) {
   return `${d}/${m}/${y}`;
 }
 
+export const POST_485_DATE = '2026-07-10';
+
 function getPresetDates(v) {
   const todayStr = toStr(new Date());
   if (v === 'all') return { from: '', to: '' };
