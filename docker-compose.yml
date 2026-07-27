@@ -1,22 +1,12 @@
 services:
-  mongo:
-    image: mongo:7
-    restart: unless-stopped
-    volumes:
-      - mongo_data:/data/db
-    ports:
-      - "27017:27017"
-
   server:
     build: ./server
     restart: unless-stopped
     ports:
       - "5000:5000"
     environment:
-      - MONGO_URI=mongodb://mongo:27017/resume-builder
+      - MONGO_URI=${MONGO_URI}
       - PORT=5000
-    depends_on:
-      - mongo
 
   client:
     build: ./client
@@ -25,6 +15,3 @@ services:
       - "3002:80"
     depends_on:
       - server
-
-volumes:
-  mongo_data:

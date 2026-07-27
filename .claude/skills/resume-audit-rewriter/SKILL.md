@@ -94,7 +94,7 @@ Reason must be one line, anchored to the JD's actual stated requirements (not ge
 
 **Standing exception — Pismo Labs and Vision Verse:** do not run keep/cut analysis on these two roles at all. Keep every bullet in both, unconditionally, regardless of JD. Only build the keep/cut table for MIDLAND HKP SERVICES. State this plainly in Step 3 output rather than scoring their bullets individually.
 
-**MIDLAND default-keep floor:** MIDLAND has a standing baseline of 7 always-kept bullets (identify by content, since numbering may shift): the platform scene-setter, the GraphQL API layer bullet, the security/encryption bullet, the Micro Frontends/Storybook bullet, the PHP-to-Next.js microservices migration bullet, the in-memory caching bullet, and the MongoDB pre-joined cache bullet. Never cut any of these 7 for MIDLAND regardless of JD. The only open question per JD is whether to ADD any of the remaining bullets (GTM, Strapi CMS, WCAG/cross-browser, Figma/i18n, AWS CloudWatch, Next.js SEO) on top of this floor — build the keep/cut table only for those, not the baseline 7.
+**MIDLAND default-keep floor:** MIDLAND has a standing baseline of 7 always-kept bullets (identify by content, since numbering may shift): the platform scene-setter (now covers both the web platform and its companion React Native mobile app — see [[project_midland_react_native_mobile]]), the GraphQL API layer bullet, the security/encryption bullet, the Micro Frontends/Storybook bullet, the PHP-to-Next.js microservices migration bullet, the in-memory caching bullet, and the MongoDB pre-joined cache bullet. Never cut any of these 7 for MIDLAND regardless of JD. The only open question per JD is whether to ADD any of the remaining bullets (GTM, Strapi CMS, WCAG/cross-browser, Figma/i18n, PHP property report automation, AWS CloudWatch, Next.js SEO, onboarding/mentoring) on top of this floor — build the keep/cut table only for those, not the baseline 7.
 
 Present the table and ask the user to confirm before moving to Step 4. Only cut bullets the user confirms; never cut silently, and never skip this step because a role "looks fine" or the user didn't ask for it — it runs every time, unconditionally.
 
@@ -110,7 +110,7 @@ Rewrite only the bullets that survived Step 3, using these rules:
 
 3. **Google XYZ formula:** Every bullet must follow: "Accomplished [X] as measured by [Y] by doing [Z]"
 
-4. **Action verbs:** Start every bullet with a strong action verb. Never use "Responsible for" or "Helped with".
+4. **Action verbs:** Start every bullet with a strong action verb. Never use "Responsible for" or "Helped with". Never use "Architected" — the user is 3 years experience, not senior/staff level, and that verb overclaims solo-ownership at a scale that doesn't match. Use "Built" or "Designed" instead for the same substance.
 
 5. **Numbers:** Add specific metrics wherever possible. If the user did not provide numbers, suggest realistic placeholders marked with `[FILL IN]`.
 
@@ -140,5 +140,32 @@ If the user approves writing to `data/my-resume.md`:
    - Job titles (do NOT add "Intern", "Senior", "Junior", or any modifier not in the base)
    - Full date lines including any parenthetical annotations (e.g. "November 2024 – March 2025 (summer internship, during Master's studies)")
    - Professional Summary, Skills, Education — unchanged unless the user asked you to rewrite them in this session
+   - **Skills trim (always runs, no exception):** regardless of whether the user asked to rewrite Skills, drop these named low-confidence/niche items from the tailored Skills lines unless the current JD explicitly asks for them (a close synonym counts, e.g. "Java 8" + "Spring-based API" keeps Java/Spring Boot): Java, Spring Boot, Django, Gradle, Maven, pnpm, Prometheus, Grafana, Vite, Vue.js, Responsive Web Design, Context API, Bootstrap, UAT environment setup, WCAG accessibility audits, Bitbucket, Python, PHP, styled-components, Progressive Web Apps (PWA), Microsoft Office Suite (Word, Excel, PowerPoint), Outlook, Teams, regression testing, data validation, internationalisation (i18n), Micro Frontends (Module Federation). These stay real facts in `my-resume-base.md` — never remove them there, only from the tailored copy. (Note: the MIDLAND experience bullet describing Micro Frontends architecture is a default-keep floor bullet and is never affected by this Skills-line trim.)
+   - **Whole-line trim:** drop the entire **Machine Learning & Data** line (NumPy, Pandas, scikit-learn, TensorFlow, Hugging Face) from the tailored Skills section whenever the JD has zero ML/data-science component.
 3. Write the result to `data/my-resume.md`.
 4. Confirm: "Written to `data/my-resume.md`. Run `npm start` to generate the .docx files."
+
+---
+
+## Step 7 — Write cover letter (if requested)
+
+`npm start` (`src/main.js`) has a built-in override: if exactly one `output/cover-letter-*.txt` file exists when it runs, its contents replace the Claude-generated cover letter body, and the file is deleted after use. This skill's cover letter always goes through that path.
+
+If the user asked for a tailored cover letter in this session:
+
+1. Write the cover letter body directly to `output/cover-letter-<short-company-or-role-slug>.txt` — plain text only, no markdown headers/bold, paragraphs separated by a blank line (`\n\n`), no em dashes.
+2. Do NOT ask the user whether/where to save it — always save it to `output/cover-letter-*.txt` by default. Only ask if the user explicitly wants the letter shown without saving.
+3. Before/after writing, delete any other stray `cover-letter-*.txt` in `output/` so only one exists (the pipeline errors out if it finds more than one).
+4. Confirm: "Cover letter saved to `output/cover-letter-<slug>.txt` — `npm start` will pick it up automatically and delete it after use."
+
+---
+
+## Step 8 — Page count check (every `npm start` run)
+
+`npm start` now prints the real resume page count (`📄 Resume page count: N`) after generating the PDF. Every time you run `npm start` (or the user reports a page count) as part of this skill:
+
+1. Always state the page count back to the user, don't just show the raw npm output silently.
+2. If it's more than 2 pages, immediately propose a cut-to-2-pages plan without waiting to be asked — don't just report the number:
+   - Levers available, in order of preference: (a) trim MIDLAND's non-floor addition bullets from Step 3 first (never the 7-bullet floor), (b) shorten Projects to fewer bullets/fewer projects, (c) tighten wording on kept bullets to fewer lines. Never touch Pismo Labs or Vision Verse bullets (standing exception, [[project resume rules]]), never drop the 7 MIDLAND floor bullets.
+   - Present the specific bullets you'd cut and why (JD relevance, same reasoning bar as Step 3), and ask for confirmation before editing `data/my-resume.md` — this follows the same "never cut silently" rule as Step 3.
+3. If it's 2 pages or fewer, just confirm the page count is fine, no cut analysis needed.

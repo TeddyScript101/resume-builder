@@ -5,7 +5,7 @@
 // what ends up in the PDF, verbatim. No LLM involved, no rewriting, no trimming.
 
 function stripAsterisks(line) {
-  return line.trim().replace(/^\*+|\*+$/g, '').trim();
+  return line.trim().replace(/^[*_]+|[*_]+$/g, '').trim();
 }
 
 function splitSections(md) {
@@ -57,7 +57,7 @@ function parseEntryBlocks(lines) {
     }
     if (line.startsWith('-')) {
       cur.bullets.push(line.replace(/^-\s*/, '').trim());
-    } else if (line.startsWith('*') && !cur.meta) {
+    } else if ((line.startsWith('*') || line.startsWith('_')) && !cur.meta) {
       cur.meta = stripAsterisks(line);
     }
   }

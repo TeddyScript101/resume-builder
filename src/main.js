@@ -190,8 +190,12 @@ async function main() {
 
   // Generate Resume PDF
   const resumePath = path.join(OUTPUT_DIR, `${baseName}_resume.pdf`);
-  const { buffer: resumeBuffer } = await createResumePDF(myInfo, data);
+  const { buffer: resumeBuffer, pageCount: resumePageCount } = await createResumePDF(myInfo, data);
   fs.writeFileSync(resumePath, resumeBuffer);
+  console.log(`📄 Resume page count: ${resumePageCount}`);
+  if (resumePageCount > 2) {
+    console.warn(`⚠️  Resume is ${resumePageCount} pages (target: 2). Trim bullets before submitting.`);
+  }
 
   // Generate Cover Letter PDF
   const clPath = path.join(OUTPUT_DIR, `${baseName}_cover-letter.pdf`);

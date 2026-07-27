@@ -22,6 +22,25 @@ async function getOne(req, res) {
 async function create(req, res) {
   try {
     const { company_name, position, resume_content, cover_letter_content, status, created_at } = req.body;
+
+    // Dedup: same company + position applied same calendar day → update existing record
+    // instead of inserting a new one (re-running `npm start` for the same job shouldn't
+    // create duplicate log entries).
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const existing = await Application.findOne({
+      company_name: new RegExp(`^${company_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+      position: new RegExp(`^${position.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+      created_at: { $gte: startOfDay }
+    });
+
+    if (existing) {
+      existing.resume_content = resume_content;
+      existing.cover_letter_content = cover_letter_content;
+      await existing.save();
+      return res.status(200).json(existing);
+    }
+
     const application = await Application.create({
       company_name,
       position,
