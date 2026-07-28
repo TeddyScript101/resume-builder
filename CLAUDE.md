@@ -2,16 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Note: this file documents both `resume-builder` (this repo) and its sibling `job-tracker` project, which lives one directory up and is not part of this git repo.
+Note: the sibling `job-tracker` project (one directory up, not part of this git repo) is deprecated and no longer used. Application tracking now lives in `server/` within this repo.
 
 ## Overview
 
-This repository contains two Node.js projects:
+This repository contains two Node.js parts:
 
-1. **resume-builder** - Generates tailored resume and cover letter .pdf files from job descriptions using Claude Pro
-2. **job-tracker** - Tracks job applications and generates analytics reports (Chinese interface)
+1. **resume-builder** (root `src/`) - Generates tailored resume and cover letter .pdf files from job descriptions using Claude Pro
+2. **server** (`server/`) - Express + Mongoose REST API that persists generated applications to MongoDB, replacing the old job-tracker CLI
 
-Both projects use Claude Pro CLI integration for AI features and require Node.js.
+resume-builder uses the Claude Pro CLI for AI features; the server is a plain Node/Express/MongoDB stack with no AI integration.
 
 ## Quick Start
 
@@ -25,21 +25,19 @@ npm start
 # or: node src/main.js
 ```
 
-Generates two .pdf files (resume + cover letter) in `output/` directory and POSTs the application record to job-tracker's API (`http://localhost:5000/api/applications`, silently skipped if the server isn't running).
+Generates two .pdf files (resume + cover letter) in `output/` directory and POSTs the application record to the tracking server's API (`http://localhost:5000/api/applications`, silently skipped if the server isn't running).
 
-### Job Tracker
+### Server (application tracking API)
 
 ```bash
-cd job-tracker
+cd server
 npm install
-# Then use any of these commands:
-node src/tracker.js add <company> <position> [status]
-node src/tracker.js list
-node src/tracker.js report
-node src/tracker.js search <keyword>
-node src/tracker.js edit <id> [field=value]
-node src/tracker.js delete <id>
+# Requires MongoDB running locally (or MONGO_URI set) and a ../.env file
+npm start
+# or for auto-reload: npm run dev
 ```
+
+Listens on `PORT` (default 5000), connects to `MONGO_URI` (default `mongodb://localhost:27017/resume-builder`), exposes CRUD at `/api/applications`.
 
 ## Architecture
 
@@ -59,31 +57,25 @@ node src/tracker.js delete <id>
 3. Build prompt with all context and send to Claude via `claude --print` CLI
 4. Parse returned JSON (must contain meta, jobAnalysis, resume, coverLetter sections)
 5. Create two separate PDF documents with tailored content
-6. POST the application record to job-tracker's API (`http://localhost:5000/api/applications`)
+6. POST the application record to the tracking server's API (`http://localhost:5000/api/applications`)
 
 **Important**: The prompt includes a STYLE RULE to never use em dashes (—), enforcing a no-em-dash global preference.
 
-### Job Tracker
+### Server (application tracking API)
 
-**Purpose**: Maintain a database of job applications with status tracking and analytics.
+**Purpose**: Persist and serve generated applications (resume/cover letter content + status) as the system of record, replacing the deprecated job-tracker CLI.
 
 **Key files**:
-- `src/tracker.js` - CLI interface with all commands (add, list, report, search, edit, delete)
-- `src/utils.js` - Helper functions
-- `data/applications.json` - Persistent application records
-- `config/settings.json` - Configuration
+- `server/index.js` - Express app entry point, connects to MongoDB, mounts `/api/applications`
+- `server/routes/applications.js` - Route definitions (GET all, GET one, POST, PUT, DELETE)
+- `server/controllers/applicationController.js` - Route handlers
+- `server/models/Application.js` - Mongoose schema
 
-**Data model** (applications.json):
-- Each record: id, company, position, appliedDate, status, rejectionDate, rejectionReason, notes, source
-- Status values: `pending`, `interview`, `rejected`, `offer`
+**Data model** (`Application` Mongoose schema):
+- Fields: `company_name`, `position`, `resume_content`, `cover_letter_content`, `status`, `created_at`
+- Status enum: `applied`, `interview`, `rejected`, `offer`, `ghosted`
 
-**Commands**:
-- `add` - Creates new application record with auto-generated timestamp
-- `list` - Displays applications grouped by status with statistics
-- `report` - Generates markdown report with failure reason analysis, trends, and improvement suggestions
-- `search` - Filters by company or position name
-- `edit` - Updates fields in a record by ID
-- `delete` - Removes a record
+**Dedup behavior**: `POST /api/applications` checks for an existing record with the same `company_name` + `position` (case-insensitive) created the same calendar day; if found, it updates that record's content instead of inserting a duplicate. This is what lets `npm start` be re-run for the same job without spamming the tracker.
 
 ## Claude Integration
 
@@ -110,35 +102,27 @@ resume-builder/
 ├── jobs/
 │   └── current.txt
 ├── output/
-├── package.json
-└── README.md
-
-job-tracker/
-├── src/
-│   ├── tracker.js
-│   └── utils.js
-├── data/
-│   └── applications.json
-├── config/
-│   └── settings.json
-├── output/
-├── scripts/
-│   └── init.sh
+├── server/
+│   ├── index.js
+│   ├── routes/
+│   │   └── applications.js
+│   ├── controllers/
+│   │   └── applicationController.js
+│   └── models/
+│       └── Application.js
 ├── package.json
 └── README.md
 ```
 
 ## Development Notes
 
-- Both projects use `require('child_process')` and file I/O only; no external APIs beyond Claude
-- Resume builder hardcodes paths relative to project root (uses `__dirname` to navigate)
-- Job tracker supports multiple update fields in one edit command (e.g., `edit <id> status=rejected rejectionReason="..."`)
-- All user-facing strings in job-tracker are in Chinese (Traditional)
-- Job tracker automatically creates `output/` directory when generating reports
-- Applications are sorted by status or company in reports, never by date in list view
+- resume-builder's CLI (`src/`) uses file I/O and the Claude Pro CLI only; no external APIs
+- resume-builder hardcodes paths relative to project root (uses `__dirname` to navigate)
+- resume-builder loads its own `.env` (one directory up from `server/`, at `server/../.env`) for `MONGO_URI`/`PORT`
+- `server` requires a running MongoDB instance to start; it exits on connection failure rather than falling back
 
 ## Testing
 
-No automated test suite is present in either project. Changes should be validated manually:
-- Resume builder: Verify .pdf output is well-formed and content is tailored to the job description
-- Job tracker: Test all CLI commands with sample data and verify JSON persistence
+No automated test suite is present. Changes should be validated manually:
+- resume-builder: Verify .pdf output is well-formed and content is tailored to the job description
+- server: Verify CRUD requests against `/api/applications` (e.g. via curl/Postman) and confirm same-day dedup updates rather than duplicates
