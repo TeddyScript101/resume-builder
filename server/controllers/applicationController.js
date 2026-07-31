@@ -28,28 +28,43 @@ async function create(req, res) {
     // create duplicate log entries).
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
+    const companyRegex = new RegExp(`^${company_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    const positionRegex = new RegExp(`^${position.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
     const existing = await Application.findOne({
-      company_name: new RegExp(`^${company_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
-      position: new RegExp(`^${position.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+      company_name: companyRegex,
+      position: positionRegex,
       created_at: { $gte: startOfDay }
     });
 
+    let application;
     if (existing) {
       existing.resume_content = resume_content;
       existing.cover_letter_content = cover_letter_content;
       await existing.save();
-      return res.status(200).json(existing);
+      application = existing;
+    } else {
+      application = await Application.create({
+        company_name,
+        position,
+        resume_content,
+        cover_letter_content,
+        status,
+        ...(created_at && { created_at })
+      });
     }
 
-    const application = await Application.create({
-      company_name,
-      position,
-      resume_content,
-      cover_letter_content,
-      status,
-      ...(created_at && { created_at })
+    // Defensive cleanup: a stale server process (deployed before this dedup logic
+    // existed, or simply not yet restarted) can let same-day duplicates slip in.
+    // Clear out any other same company+position+day records so npm start re-runs
+    // self-heal instead of accumulating dupes.
+    await Application.deleteMany({
+      _id: { $ne: application._id },
+      company_name: companyRegex,
+      position: positionRegex,
+      created_at: { $gte: startOfDay }
     });
-    res.status(201).json(application);
+
+    res.status(existing ? 200 : 201).json(application);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
