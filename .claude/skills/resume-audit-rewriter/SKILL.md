@@ -124,10 +124,11 @@ Rewrite only the bullets that survived Step 3, using these rules:
 
 Show the audit (Step 2) first, then the keep/cut table (Step 3), then the rewritten experience section (Step 4).
 
-After showing all three, ask the user two questions:
+After showing all three, ask the user one question:
 
-1. "Want me to also rewrite any other section (summary, skills), or generate a tailored cover letter for this role?"
-2. "Should I write the tailored resume to `data/my-resume.md` so you can run `npm start` to generate the .docx?"
+1. "Should I write the tailored resume to `data/my-resume.md` (and generate the cover letter) so you can run `npm start` to generate the PDFs?"
+
+Cover letter generation is no longer optional — `npm start` hard-requires `output/cover-letter-*.txt` to exist (no AI fallback), so Step 7 always runs once the user approves writing the resume. You may still separately ask whether to rewrite Summary/Skills if the user wants that beyond the mandatory Step 6 trims.
 
 ---
 
@@ -142,16 +143,15 @@ If the user approves writing to `data/my-resume.md`:
    - Professional Summary, Skills, Education — unchanged unless the user asked you to rewrite them in this session
    - **Skills trim (always runs, no exception):** regardless of whether the user asked to rewrite Skills, drop these named low-confidence/niche items from the tailored Skills lines unless the current JD explicitly asks for them (a close synonym counts, e.g. "Java 8" + "Spring-based API" keeps Java/Spring Boot): Java, Spring Boot, Django, Gradle, Maven, pnpm, Prometheus, Grafana, Vite, Vue.js, Responsive Web Design, Context API, Bootstrap, UAT environment setup, WCAG accessibility audits, Bitbucket, Python, PHP, styled-components, Progressive Web Apps (PWA), Microsoft Office Suite (Word, Excel, PowerPoint), Outlook, Teams, regression testing, data validation, internationalisation (i18n), Micro Frontends (Module Federation). These stay real facts in `my-resume-base.md` — never remove them there, only from the tailored copy. (Note: the MIDLAND experience bullet describing Micro Frontends architecture is a default-keep floor bullet and is never affected by this Skills-line trim.)
    - **Whole-line trim:** drop the entire **Machine Learning & Data** line (NumPy, Pandas, scikit-learn, TensorFlow, Hugging Face) from the tailored Skills section whenever the JD has zero ML/data-science component.
+   - **AI-Native Resume & Application Pipeline project (conditional include):** this Projects-section entry is permanent in `my-resume-base.md`, but the tailored copy only includes it when the JD strongly matches AI/agentic themes (AI tooling, AI-assisted SDLC, LLM/agent work, etc.). Drop it entirely from the tailored copy for JDs without that theme (e.g. pure mobile, backend/IAM, generic e-commerce, vague culture-fit postings) — this check runs every time, not just when Projects gets trimmed for page budget.
 3. Write the result to `data/my-resume.md`.
 4. Confirm: "Written to `data/my-resume.md`. Run `npm start` to generate the .docx files."
 
 ---
 
-## Step 7 — Write cover letter (if requested)
+## Step 7 — Write cover letter (always runs)
 
-`npm start` (`src/main.js`) has a built-in override: if exactly one `output/cover-letter-*.txt` file exists when it runs, its contents replace the Claude-generated cover letter body, and the file is deleted after use. This skill's cover letter always goes through that path.
-
-If the user asked for a tailored cover letter in this session:
+`npm start` (`src/main.js`) has no AI cover-letter generation anymore — it hard-requires exactly one `output/cover-letter-*.txt` file to exist and errors out (`❌ No cover-letter-*.txt found`) if it's missing. This step is therefore mandatory, not optional: once the user approves writing the tailored resume (Step 5), always write the cover letter too, without asking separately.
 
 1. Write the cover letter body directly to `output/cover-letter-<short-company-or-role-slug>.txt` — plain text only, no markdown headers/bold, paragraphs separated by a blank line (`\n\n`), no em dashes.
 2. Do NOT ask the user whether/where to save it — always save it to `output/cover-letter-*.txt` by default. Only ask if the user explicitly wants the letter shown without saving.

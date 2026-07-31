@@ -4,10 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 require('dotenv').config();
-const { buildPrompt, generateContent, parseResponse } = require('./generate-content');
 const { parseResume } = require('./parse-resume');
-// const { createResumeDoc, createCoverLetterDoc, Packer } = require('./create-docx');
-const { createResumePDF, createCoverLetterPDF, estimateResumePages } = require('./create-pdf');
+const { createResumePDF, createCoverLetterPDF } = require('./create-pdf');
 
 const ROOT = path.join(__dirname, '..');
 const JOB_FILE = path.join(ROOT, 'jobs/current.txt');
@@ -57,6 +55,14 @@ function detectCompanyName(jobText) {
   return 'the Company';
 }
 
+function detectJobTitle(jobText) {
+  const lines = jobText.split('\n').map(l => l.trim()).filter(Boolean);
+  const titleLine = lines.find(l =>
+    l.length < 80 && /engineer|developer|manager|analyst|specialist|lead|architect|consultant|coordinator|director|scientist/i.test(l)
+  );
+  return titleLine || 'Application';
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const fromJsonIndex = args.indexOf('--from-json');
@@ -96,87 +102,48 @@ async function main() {
     }
 
     console.log('📄 Job description loaded');
-    console.log('🤖 Generating tailored content via Claude...\n');
 
-    const prompt = buildPrompt(jobDescription, myResume, myInfo);
-
-    const MAX_ATTEMPTS = 3;
-    let lastRaw, lastError;
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      const raw = await generateContent(prompt);
-      try {
-        data = parseResponse(raw);
-        break;
-      } catch (e) {
-        lastRaw = raw;
-        lastError = e;
-        data = null;
-        if (attempt < MAX_ATTEMPTS) {
-          console.warn(`⚠️  Claude response was truncated/invalid (attempt ${attempt}/${MAX_ATTEMPTS}). Retrying...`);
-        }
-      }
-    }
-
-    if (!data) {
-      console.error(`❌ Failed to parse Claude response after ${MAX_ATTEMPTS} attempts. Raw output:`);
-      console.error(lastRaw.slice(0, 500));
-      process.exit(1);
-    }
-
-    // Resume content comes verbatim from my-resume.md — Claude never rewrites it,
-    // it only scores fit (jobAnalysis) and writes the cover letter.
-    data.resume = parseResume(myResume, myInfo);
-
-    // Custom cover letter override — if any cover-letter-*.txt exists in output/, use it
+    // Cover letter must be pre-written to output/cover-letter-*.txt — no AI fallback
     const clFiles = fs.existsSync(OUTPUT_DIR)
       ? fs.readdirSync(OUTPUT_DIR).filter(f => f.startsWith('cover-letter-') && f.endsWith('.txt'))
       : [];
+    if (clFiles.length === 0) {
+      console.error('❌ No cover-letter-*.txt found in output/. Write the cover letter body there first.');
+      process.exit(1);
+    }
     if (clFiles.length > 1) {
       console.error(`❌ Multiple cover-letter-*.txt files found in output/: ${clFiles.join(', ')}`);
       console.error('   Delete all but the correct one before running.');
       process.exit(1);
     }
-    if (clFiles.length === 1) {
-      const clBodyFile = path.join(OUTPUT_DIR, clFiles[0]);
-      data.coverLetter.body = fs.readFileSync(clBodyFile, 'utf-8').trim();
-      fs.unlinkSync(clBodyFile);
-      console.log(`✍️  Custom cover letter injected from output/${clFiles[0]}`);
-    }
+    const clBodyFile = path.join(OUTPUT_DIR, clFiles[0]);
+    const clBody = fs.readFileSync(clBodyFile, 'utf-8').trim();
+    fs.unlinkSync(clBodyFile);
+    console.log(`✍️  Cover letter loaded from output/${clFiles[0]}`);
 
-    // Sanity-check cover letter body against prompt rules (word count, em dash, paragraph breaks)
-    const clBody = data.coverLetter.body;
+    // Sanity-check cover letter body (word count, em dash, paragraph breaks)
     const wc = clBody.trim().split(/\s+/).length;
     if (wc < 200 || wc > 400) console.warn(`⚠️  Cover letter word count: ${wc} (target 250-350)`);
     if (/—/.test(clBody)) console.warn('⚠️  Cover letter contains em dash');
     if (!clBody.includes('\n\n')) console.warn('⚠️  Cover letter has no paragraph breaks');
 
+    companyName = detectCompanyName(jobDescription);
+    const jobTitleName = detectJobTitle(jobDescription);
+
+    // Resume content comes verbatim from my-resume.md
+    data = {
+      meta: { company: companyName, jobTitle: jobTitleName },
+      resume: parseResume(myResume, myInfo),
+      coverLetter: { body: clBody }
+    };
+
     // Build filename: YYYY-MM-DD_Company_Job-Title
     const date = new Date().toISOString().split('T')[0];
-    const company = (data.meta?.company || detectCompanyName(jobDescription))
-      .replace(/[^a-zA-Z0-9\s]/g, '').trim()
-      .replace(/\s+/g, '-');
-    const jobTitle = (data.meta?.jobTitle || 'Application')
-      .replace(/[^a-zA-Z0-9\s]/g, '').trim()
-      .replace(/\s+/g, '-');
+    const company = companyName.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '-');
+    const jobTitle = jobTitleName.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '-');
     baseName = `${date}_${company}_${jobTitle}`;
-    companyName = data.meta?.company || detectCompanyName(jobDescription);
 
-    console.log(`🏢 ${companyName} — ${data.meta?.jobTitle || 'Role'}`);
-
-    // Print job analysis to terminal
-    console.log('\n📊 Job Analysis:');
-    console.log('  核心要求：');
-    data.jobAnalysis.coreRequirements.forEach(r => console.log(`    • ${r}`));
-    console.log('  軟技能：');
-    data.jobAnalysis.softSkills.forEach(s => console.log(`    • ${s}`));
-    console.log('');
-
-    // Hard citizenship/PR requirement → block PDF/MongoDB outright
-    if (data.jobAnalysis?.hardCitizenshipRequired) {
-      console.log('⏭️  Resume & Cover Letter skipped (硬性 PR/公民權要求)');
-      console.log('⏭️  MongoDB skipped (硬性 PR/公民權要求)');
-      return;
-    }
+    console.log(`🏢 ${companyName} — ${jobTitleName}`);
 
     // Save JSON for future re-render
     if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });

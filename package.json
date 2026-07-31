@@ -5,7 +5,6 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prestart": "node src/prescreen.js",
     "start": "node src/main.js",
     "email": "node src/email.js",
     "audit": "node src/audit.js",
@@ -17,7 +16,6 @@
   "dependencies": {
     "docx": "^9.6.1",
     "dotenv": "^16.4.5",
-    "openai": "^4.77.0",
     "pdfkit": "^0.18.0"
   }
 }
